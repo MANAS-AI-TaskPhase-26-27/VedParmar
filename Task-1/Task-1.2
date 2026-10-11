@@ -1,0 +1,48 @@
+import numpy as np
+import pandas as pd
+
+# Load crime data
+train_c = pd.read_csv('crime_train.csv').dropna()
+test_c = pd.read_csv('crime_test.csv').dropna()
+
+# Automatically find the target column regardless of capitalization
+target = [col for col in train_c.columns if col.lower() == 'closed'][0]
+
+# Map text-based target labels to 0 and 1
+unique_classes = train_c[target].unique()
+class_mapping = {unique_classes[0]: 0, unique_classes[1]: 1}
+
+y_train = train_c[target].map(class_mapping).values
+y_test = test_c[target].map(class_mapping).values
+
+# Separate numeric features and target
+X_train = train_c.drop(columns=[target]).select_dtypes(include=[np.number]).values
+X_test = test_c.drop(columns=[target]).select_dtypes(include=[np.number]).values
+
+# Standardize features
+c_mean, c_std = np.mean(X_train, axis=0), np.std(X_train, axis=0) + 1e-8
+X_train = (X_train - c_mean) / c_std
+X_test = (X_test - c_mean) / c_std
+
+# Train Logistic Regression Model via Gradient Descent
+w_c, b_c = np.zeros(X_train.shape[1]), 0
+m_c = len(y_train)
+
+# 7000 Epochs for better convergence
+for _ in range(100000):
+    # Sigmoid function for predictions
+    preds = 1 / (1 + np.exp(-np.clip(X_train.dot(w_c) + b_c, -250, 250)))
+    
+    # Gradients (using a learning rate of 0.1)
+    w_c -= 0.00001 * (1 / m_c) * X_train.T.dot(preds - y_train)
+    b_c -= 0.00001 * (1 / m_c) * np.sum(preds - y_train)
+
+# Predict on the test set
+test_probs = 1 / (1 + np.exp(-np.clip(X_test.dot(w_c) + b_c, -250, 250)))
+test_classes = (test_probs >= 0.5).astype(int)
+
+# Calculate and print Accuracy
+accuracy = np.mean(test_classes == y_test)
+
+print("Task 1.2 Completed! ✅")
+print(f"Test Set Accuracy (Epochs): {accuracy:.4f}")
