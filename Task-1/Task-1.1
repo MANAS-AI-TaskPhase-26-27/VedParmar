@@ -1,0 +1,42 @@
+import numpy as np
+import pandas as pd
+
+# Load stock data
+train = pd.read_csv('train.csv').dropna()
+test = pd.read_csv('test.csv').dropna()
+
+# Automatically find the 'Close' column regardless of capitalization
+target = [col for col in train.columns if col.lower() == 'close'][0]
+
+# Separate numeric features and target for training
+X_train = train.drop(columns=[target]).select_dtypes(include=[np.number]).values
+y_train = train[target].values
+
+# Separate numeric features and target for testing
+X_test = test.drop(columns=[target]).select_dtypes(include=[np.number]).values
+y_test = test[target].values
+
+# Standardize features
+mean, std = np.mean(X_train, axis=0), np.std(X_train, axis=0) + 1e-8
+X_train = (X_train - mean) / std
+X_test = (X_test - mean) / std
+
+# Train Linear Regression Model via Gradient Descent
+w, b = np.zeros(X_train.shape[1]), 0
+m = len(y_train)
+
+for _ in range(100000):
+    preds = X_train.dot(w) + b
+    w -= 0.0000001 * (1 / m) * X_train.T.dot(preds - y_train)
+    b -= 0.0000001 * (1 / m) * np.sum(preds - y_train)
+
+# Predict on the test set
+test_predictions = X_test.dot(w) + b
+
+# Calculate Accuracy (R-squared score for regression)
+ss_res = np.sum((y_test - test_predictions) ** 2)
+ss_tot = np.sum((y_test - np.mean(y_test)) ** 2)
+accuracy = 1 - (ss_res / ss_tot)
+
+print("Task 1.1 Completed! ✅")
+print(f"Test Set Accuracy (R2 Score): {accuracy:.4f}")
